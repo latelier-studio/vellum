@@ -74,6 +74,42 @@ export function instrumentArgsForActions(
   return out;
 }
 
+/**
+ * Shadow DOM isolation (V2).
+ *
+ * An alternative to iframe isolation. Renders the story tree into a ShadowRoot
+ * on the host page. Tokens still propagate because shadow trees inherit
+ * `--vellum-*` custom properties from their host. Lighter than iframe, but
+ * incompatible with libraries that mutate document.head / global stylesheets
+ * during render (Material UI, emotion's default mode, …).
+ *
+ * Tradeoffs:
+ *   - + No iframe round-trip, faster renders
+ *   - + Inherits scroll, no cross-document focus loss
+ *   - − Some CSS-in-JS libs leak styles to document.head and miss the shadow
+ *   - − Global event listeners (e.g. axe-core scans) need explicit shadow-mode
+ *
+ * Host shells opt into this mode by passing `isolation: 'shadow'` to the
+ * preview mount helper. Default stays `iframe`.
+ */
+export type IsolationMode = 'iframe' | 'shadow';
+
+export function mountInShadow(
+  host: HTMLElement,
+  render: (root: ShadowRoot) => void,
+  styles: string,
+): ShadowRoot {
+  const root = host.shadowRoot ?? host.attachShadow({ mode: 'open' });
+  // Token bridge: a one-line style block re-asserts the host's --vellum-*
+  // variables inside the shadow tree. Required for browsers that ever stop
+  // inheriting custom properties (older Safari combinations) — cheap insurance.
+  const style = document.createElement('style');
+  style.textContent = `:host, :root { ${styles} }`;
+  root.replaceChildren(style);
+  render(root);
+  return root;
+}
+
 function serializeArgs(args: unknown[]): unknown[] {
   return args.map((a) => {
     if (a === null || a === undefined) return a;

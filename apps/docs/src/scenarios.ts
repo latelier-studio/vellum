@@ -27,6 +27,8 @@ const SCENARIO_META: Record<string, { label: string; description: string }> = {
   notion: { label: 'Lumen', description: 'Warm paper · Source Serif display, peach accent.' },
   linear: { label: 'Beam', description: 'Dense ops · compact Inter, indigo accent, kbd hints.' },
   zine: { label: 'Riso', description: 'Risograph print + brutalist chrome · vermillion stamps.' },
+  editorial: { label: 'Folio', description: 'Magazine top-nav · Fraunces + Source Serif, oxblood accent.' },
+  dense: { label: 'Helix', description: 'Operational dashboard · compact Inter, teal accent, 3-col layout.' },
 };
 
 function scenarioFromDesignMdPath(path: string): string {

@@ -1,0 +1,24 @@
+{
+  "name": "@vellum/addon-sdk",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean --external react --external react-dom",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vellum/story": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  }
+}
