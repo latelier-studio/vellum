@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/adapter-w3c" },
+    { "path": "./packages/adapter-shadcn" },
+    { "path": "./packages/adapter-md" },
+    { "path": "./packages/story" },
+    { "path": "./packages/react" },
+    { "path": "./packages/preview" },
+    { "path": "./packages/chrome-minimal-docs" },
+    { "path": "./packages/chrome-minimal-workbench" },
+    { "path": "./packages/panel-controls" },
+    { "path": "./packages/panel-a11y" },
+    { "path": "./packages/panel-actions" },
+    { "path": "./packages/panel-code" },
+    { "path": "./packages/cli" }
+  ]
+}

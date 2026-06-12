@@ -1,0 +1,30 @@
+{
+  "name": "@vellum/react",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./mdx": {
+      "types": "./dist/mdx.d.ts",
+      "import": "./dist/mdx.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup src/index.ts src/mdx.ts --format esm --dts --clean --external react --external react-dom",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@vellum/core": "workspace:*",
+    "@vellum/story": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  }
+}
