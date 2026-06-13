@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ComponentEntry, PropType, StoryEntry } from '@vellum/story';
 import {
-  DEFAULT_VIEWPORTS,
   type A11yResult,
   type PreviewMessageFromChild,
   type PreviewMessageFromParent,
@@ -26,7 +25,15 @@ type ActionLog = { id: number; name: string; args: unknown[]; timestamp: number 
 
 const PREVIEW_BASE = '/preview';
 
-export function WorkbenchSection({ component }: { component: ComponentEntry }) {
+export function WorkbenchSection({
+  component,
+  viewport,
+  background,
+}: {
+  component: ComponentEntry;
+  viewport: ViewportSpec;
+  background: string;
+}) {
   const [storyId, setStoryId] = useState<string>(() => component.stories[0]?.id ?? '');
   const current = useMemo<{ component: ComponentEntry; story: StoryEntry } | null>(() => {
     const story = component.stories.find((s) => s.id === storyId);
@@ -34,8 +41,6 @@ export function WorkbenchSection({ component }: { component: ComponentEntry }) {
   }, [component, storyId]);
 
   const [args, setArgs] = useState<Record<string, unknown>>(() => current?.story.args ?? {});
-  const [viewport, setViewport] = useState<ViewportSpec>(DEFAULT_VIEWPORTS[0]!);
-  const [background, setBackground] = useState<string>('var(--vellum-color-bg)');
   const [actions, setActions] = useState<ActionLog[]>([]);
   const [a11y, setA11y] = useState<A11yResult | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>('controls');
@@ -88,15 +93,7 @@ export function WorkbenchSection({ component }: { component: ComponentEntry }) {
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: 480 }}>
-        <Toolbar
-          stories={component.stories}
-          storyId={storyId}
-          onStory={setStoryId}
-          viewport={viewport}
-          onViewport={setViewport}
-          background={background}
-          onBackground={setBackground}
-        />
+        <StoryChips stories={component.stories} storyId={storyId} onStory={setStoryId} />
         <PreviewStage current={current} viewport={viewport} background={background} iframeRef={iframeRef} />
       </div>
       <aside
@@ -128,154 +125,51 @@ export function WorkbenchSection({ component }: { component: ComponentEntry }) {
   );
 }
 
-function Toolbar({
+function StoryChips({
   stories,
   storyId,
   onStory,
-  viewport,
-  onViewport,
-  background,
-  onBackground,
 }: {
   stories: StoryEntry[];
   storyId: string;
   onStory: (id: string) => void;
-  viewport: ViewportSpec;
-  onViewport: (v: ViewportSpec) => void;
-  background: string;
-  onBackground: (v: string) => void;
 }) {
-  const bgPresets: Array<{ id: string; value: string; label: string }> = [
-    { id: 'token', value: 'var(--vellum-color-bg)', label: 'Token' },
-    { id: 'muted', value: 'var(--vellum-color-muted)', label: 'Muted' },
-    { id: 'white', value: '#ffffff', label: 'White' },
-    { id: 'black', value: '#000000', label: 'Black' },
-  ];
-  const currentBg = bgPresets.find((p) => p.value === background)?.id ?? 'token';
   return (
     <div
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: 'var(--vellum-space-3)',
-        alignItems: 'center',
+        gap: 6,
         padding: 'var(--vellum-space-3) var(--vellum-space-4)',
         borderBottom: '1px solid var(--vellum-color-border)',
         background: 'color-mix(in oklab, var(--vellum-color-fg) 3%, transparent)',
       }}
     >
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1, minWidth: 0 }}>
-        {stories.map((s) => {
-          const on = s.id === storyId;
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => onStory(s.id)}
-              style={{
-                paddingBlock: 6,
-                paddingInline: 10,
-                background: on ? 'var(--vellum-color-fg)' : 'transparent',
-                color: on ? 'var(--vellum-color-bg)' : 'var(--vellum-color-fg)',
-                border: '1px solid ' + (on ? 'var(--vellum-color-fg)' : 'var(--vellum-color-border)'),
-                borderRadius: 'var(--vellum-radius-sm)',
-                fontFamily: 'var(--vellum-font-mono)',
-                fontSize: 11,
-                letterSpacing: '0.06em',
-                cursor: on ? 'default' : 'pointer',
-              }}
-            >
-              {s.name}
-            </button>
-          );
-        })}
-      </div>
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-        <ToolbarSelect
-          label="Viewport"
-          value={viewport.id}
-          onChange={(id) => {
-            const next = DEFAULT_VIEWPORTS.find((v) => v.id === id);
-            if (next) onViewport(next);
-          }}
-          options={DEFAULT_VIEWPORTS.map((v) => ({
-            value: v.id,
-            label: v.width > 0 ? `${v.name} ${v.width}` : v.name,
-          }))}
-        />
-        <ToolbarSelect
-          label="Bg"
-          value={currentBg}
-          onChange={(id) => {
-            const p = bgPresets.find((p) => p.id === id);
-            if (p) onBackground(p.value);
-          }}
-          options={bgPresets.map((p) => ({ value: p.id, label: p.label }))}
-        />
-      </div>
+      {stories.map((s) => {
+        const on = s.id === storyId;
+        return (
+          <button
+            key={s.id}
+            type="button"
+            onClick={() => onStory(s.id)}
+            style={{
+              paddingBlock: 6,
+              paddingInline: 10,
+              background: on ? 'var(--vellum-color-fg)' : 'transparent',
+              color: on ? 'var(--vellum-color-bg)' : 'var(--vellum-color-fg)',
+              border: '1px solid ' + (on ? 'var(--vellum-color-fg)' : 'var(--vellum-color-border)'),
+              borderRadius: 'var(--vellum-radius-sm)',
+              fontFamily: 'var(--vellum-font-mono)',
+              fontSize: 11,
+              letterSpacing: '0.06em',
+              cursor: on ? 'default' : 'pointer',
+            }}
+          >
+            {s.name}
+          </button>
+        );
+      })}
     </div>
-  );
-}
-
-function ToolbarSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <label
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        paddingInline: 8,
-        paddingBlock: 4,
-        background: 'var(--vellum-color-bg)',
-        border: '1px solid var(--vellum-color-border)',
-        borderRadius: 'var(--vellum-radius-sm)',
-      }}
-    >
-      <span
-        style={{
-          fontFamily: 'var(--vellum-font-mono)',
-          fontSize: 10,
-          letterSpacing: '0.12em',
-          textTransform: 'uppercase',
-          color: 'var(--vellum-color-muted-fg)',
-        }}
-      >
-        {label}
-      </span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        style={{
-          background: 'transparent',
-          color: 'var(--vellum-color-fg)',
-          border: 0,
-          fontFamily: 'var(--vellum-font-mono)',
-          fontSize: 11,
-          padding: 0,
-          cursor: 'pointer',
-          appearance: 'none',
-          MozAppearance: 'none',
-          WebkitAppearance: 'none',
-          paddingRight: 12,
-        }}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </label>
   );
 }
 

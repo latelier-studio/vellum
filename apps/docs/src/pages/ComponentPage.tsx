@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ArgsTable, Story, useManifest } from '@vellum/react';
+import { DEFAULT_VIEWPORTS, type ViewportSpec } from '@vellum/preview';
 import { ModeTabs } from '../components/ModeTabs.js';
 import { WorkbenchSection } from '../components/WorkbenchSection.js';
 
@@ -43,6 +44,8 @@ export function ComponentPage({
   const manifest = useManifest();
   const component = manifest.components.find((c) => c.id === componentId);
   const [viewMode, setViewMode] = useViewMode(componentId);
+  const [viewport, setViewport] = useState<ViewportSpec>(DEFAULT_VIEWPORTS[0]!);
+  const [background, setBackground] = useState<string>('var(--vellum-color-bg)');
 
   if (!component) {
     return (
@@ -101,15 +104,26 @@ export function ComponentPage({
           >
             {component.name}
           </h1>
-          <ModeTabs
-            current={viewMode}
-            onSelect={(m) => setViewMode(m)}
-          />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            {isWorkbench ? (
+              <PreviewControls
+                viewport={viewport}
+                onViewport={setViewport}
+                background={background}
+                onBackground={setBackground}
+              />
+            ) : null}
+            <ModeTabs current={viewMode} onSelect={(m) => setViewMode(m)} />
+          </div>
         </div>
       </header>
 
       {isWorkbench ? (
-        <WorkbenchSection component={component} />
+        <WorkbenchSection
+          component={component}
+          viewport={viewport}
+          background={background}
+        />
       ) : (
         <>
           <DocsView component={component} />
@@ -124,6 +138,113 @@ export function ComponentPage({
         </>
       )}
     </article>
+  );
+}
+
+function PreviewControls({
+  viewport,
+  onViewport,
+  background,
+  onBackground,
+}: {
+  viewport: ViewportSpec;
+  onViewport: (v: ViewportSpec) => void;
+  background: string;
+  onBackground: (v: string) => void;
+}) {
+  const bgPresets: Array<{ id: string; value: string; label: string }> = [
+    { id: 'token', value: 'var(--vellum-color-bg)', label: 'Token' },
+    { id: 'muted', value: 'var(--vellum-color-muted)', label: 'Muted' },
+    { id: 'white', value: '#ffffff', label: 'White' },
+    { id: 'black', value: '#000000', label: 'Black' },
+  ];
+  const currentBg = bgPresets.find((p) => p.value === background)?.id ?? 'token';
+  return (
+    <>
+      <HeaderSelect
+        label="Viewport"
+        value={viewport.id}
+        onChange={(id) => {
+          const next = DEFAULT_VIEWPORTS.find((v) => v.id === id);
+          if (next) onViewport(next);
+        }}
+        options={DEFAULT_VIEWPORTS.map((v) => ({
+          value: v.id,
+          label: v.width > 0 ? `${v.name} ${v.width}` : v.name,
+        }))}
+      />
+      <HeaderSelect
+        label="Bg"
+        value={currentBg}
+        onChange={(id) => {
+          const p = bgPresets.find((p) => p.id === id);
+          if (p) onBackground(p.value);
+        }}
+        options={bgPresets.map((p) => ({ value: p.id, label: p.label }))}
+      />
+    </>
+  );
+}
+
+function HeaderSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <label
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        paddingInline: 8,
+        paddingBlock: 5,
+        background: 'color-mix(in oklab, var(--vellum-color-fg) 5%, transparent)',
+        border: '1px solid var(--vellum-color-border)',
+        borderRadius: 'var(--vellum-radius-md)',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--vellum-font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: 'var(--vellum-color-muted-fg)',
+        }}
+      >
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          background: 'transparent',
+          color: 'var(--vellum-color-fg)',
+          border: 0,
+          fontFamily: 'var(--vellum-font-mono)',
+          fontSize: 11,
+          padding: 0,
+          paddingRight: 12,
+          cursor: 'pointer',
+          appearance: 'none',
+          MozAppearance: 'none',
+          WebkitAppearance: 'none',
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
