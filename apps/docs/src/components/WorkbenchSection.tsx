@@ -88,15 +88,16 @@ export function WorkbenchSection({ component }: { component: ComponentEntry }) {
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: 480 }}>
-        <StoryChips stories={component.stories} storyId={storyId} onStory={setStoryId} />
-        <PreviewStage
-          current={current}
+        <Toolbar
+          stories={component.stories}
+          storyId={storyId}
+          onStory={setStoryId}
           viewport={viewport}
           onViewport={setViewport}
           background={background}
           onBackground={setBackground}
-          iframeRef={iframeRef}
         />
+        <PreviewStage current={current} viewport={viewport} background={background} iframeRef={iframeRef} />
       </div>
       <aside
         style={{
@@ -127,71 +128,194 @@ export function WorkbenchSection({ component }: { component: ComponentEntry }) {
   );
 }
 
-function StoryChips({
+function Toolbar({
   stories,
   storyId,
   onStory,
+  viewport,
+  onViewport,
+  background,
+  onBackground,
 }: {
   stories: StoryEntry[];
   storyId: string;
   onStory: (id: string) => void;
+  viewport: ViewportSpec;
+  onViewport: (v: ViewportSpec) => void;
+  background: string;
+  onBackground: (v: string) => void;
 }) {
+  const bgPresets: Array<{ id: string; value: string; label: string }> = [
+    { id: 'token', value: 'var(--vellum-color-bg)', label: 'Token' },
+    { id: 'muted', value: 'var(--vellum-color-muted)', label: 'Muted' },
+    { id: 'white', value: '#ffffff', label: 'White' },
+    { id: 'black', value: '#000000', label: 'Black' },
+  ];
+  const currentBg = bgPresets.find((p) => p.value === background)?.id ?? 'token';
   return (
     <div
       style={{
         display: 'flex',
         flexWrap: 'wrap',
-        gap: 6,
+        gap: 'var(--vellum-space-3)',
+        alignItems: 'center',
         padding: 'var(--vellum-space-3) var(--vellum-space-4)',
         borderBottom: '1px solid var(--vellum-color-border)',
         background: 'color-mix(in oklab, var(--vellum-color-fg) 3%, transparent)',
       }}
     >
-      {stories.map((s) => {
-        const on = s.id === storyId;
-        return (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => onStory(s.id)}
-            style={{
-              paddingBlock: 6,
-              paddingInline: 10,
-              background: on ? 'var(--vellum-color-fg)' : 'transparent',
-              color: on ? 'var(--vellum-color-bg)' : 'var(--vellum-color-fg)',
-              border: '1px solid ' + (on ? 'var(--vellum-color-fg)' : 'var(--vellum-color-border)'),
-              borderRadius: 'var(--vellum-radius-sm)',
-              fontFamily: 'var(--vellum-font-mono)',
-              fontSize: 11,
-              letterSpacing: '0.06em',
-              cursor: on ? 'default' : 'pointer',
-            }}
-          >
-            {s.name}
-          </button>
-        );
-      })}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, flex: 1, minWidth: 0 }}>
+        {stories.map((s) => {
+          const on = s.id === storyId;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onStory(s.id)}
+              style={{
+                paddingBlock: 6,
+                paddingInline: 10,
+                background: on ? 'var(--vellum-color-fg)' : 'transparent',
+                color: on ? 'var(--vellum-color-bg)' : 'var(--vellum-color-fg)',
+                border: '1px solid ' + (on ? 'var(--vellum-color-fg)' : 'var(--vellum-color-border)'),
+                borderRadius: 'var(--vellum-radius-sm)',
+                fontFamily: 'var(--vellum-font-mono)',
+                fontSize: 11,
+                letterSpacing: '0.06em',
+                cursor: on ? 'default' : 'pointer',
+              }}
+            >
+              {s.name}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <ToolbarSelect
+          label="Viewport"
+          value={viewport.id}
+          onChange={(id) => {
+            const next = DEFAULT_VIEWPORTS.find((v) => v.id === id);
+            if (next) onViewport(next);
+          }}
+          options={DEFAULT_VIEWPORTS.map((v) => ({
+            value: v.id,
+            label: v.width > 0 ? `${v.name} ${v.width}` : v.name,
+          }))}
+        />
+        <ToolbarSelect
+          label="Bg"
+          value={currentBg}
+          onChange={(id) => {
+            const p = bgPresets.find((p) => p.id === id);
+            if (p) onBackground(p.value);
+          }}
+          options={bgPresets.map((p) => ({ value: p.id, label: p.label }))}
+        />
+      </div>
     </div>
+  );
+}
+
+function ToolbarSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <label
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        paddingInline: 8,
+        paddingBlock: 4,
+        background: 'var(--vellum-color-bg)',
+        border: '1px solid var(--vellum-color-border)',
+        borderRadius: 'var(--vellum-radius-sm)',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: 'var(--vellum-font-mono)',
+          fontSize: 10,
+          letterSpacing: '0.12em',
+          textTransform: 'uppercase',
+          color: 'var(--vellum-color-muted-fg)',
+        }}
+      >
+        {label}
+      </span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          background: 'transparent',
+          color: 'var(--vellum-color-fg)',
+          border: 0,
+          fontFamily: 'var(--vellum-font-mono)',
+          fontSize: 11,
+          padding: 0,
+          cursor: 'pointer',
+          appearance: 'none',
+          MozAppearance: 'none',
+          WebkitAppearance: 'none',
+          paddingRight: 12,
+        }}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
 function PreviewStage({
   current,
   viewport,
-  onViewport,
   background,
-  onBackground,
   iframeRef,
 }: {
   current: { component: ComponentEntry; story: StoryEntry } | null;
   viewport: ViewportSpec;
-  onViewport: (v: ViewportSpec) => void;
   background: string;
-  onBackground: (v: string) => void;
   iframeRef: React.RefObject<HTMLIFrameElement>;
 }) {
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [available, setAvailable] = useState<{ w: number; h: number }>({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const measure = () => {
+      const cs = getComputedStyle(el);
+      const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      setAvailable({ w: el.clientWidth - padX, h: el.clientHeight - padY });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const hasFixed = viewport.width > 0 && viewport.height > 0;
+  const scale = hasFixed && available.w > 0 && available.h > 0
+    ? Math.min(1, available.w / viewport.width, available.h / viewport.height)
+    : 1;
+
   return (
     <div
+      ref={stageRef}
       style={{
         position: 'relative',
         flex: 1,
@@ -204,34 +328,65 @@ function PreviewStage({
           var(--vellum-color-muted)
         `,
         minHeight: 360,
+        overflow: 'hidden',
       }}
     >
-      <PreviewOverlayPickers
-        viewport={viewport}
-        onViewport={onViewport}
-        background={background}
-        onBackground={onBackground}
-      />
+      {hasFixed && scale < 1 ? <ScaleBadge label={`${Math.round(scale * 100)}%`} /> : null}
       {current ? (
-        <div
-          style={{
-            background,
-            boxShadow:
-              '0 0 0 1px var(--vellum-color-border), 0 24px 48px -16px color-mix(in oklab, var(--vellum-color-fg) 10%, transparent)',
-            borderRadius: 'var(--vellum-radius-md)',
-            overflow: 'hidden',
-            width: viewport.width > 0 ? viewport.width : '100%',
-            height: viewport.height > 0 ? viewport.height : 320,
-            maxWidth: '100%',
-          }}
-        >
-          <iframe
-            ref={iframeRef}
-            title={`${current.story.name} preview`}
-            src={`${PREVIEW_BASE}/${current.story.id}`}
-            style={{ width: '100%', height: '100%', border: 0, background: 'transparent', display: 'block' }}
-          />
-        </div>
+        hasFixed ? (
+          <div
+            style={{
+              width: viewport.width * scale,
+              height: viewport.height * scale,
+              position: 'relative',
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: viewport.width,
+                height: viewport.height,
+                transform: `scale(${scale})`,
+                transformOrigin: '0 0',
+                background,
+                boxShadow:
+                  '0 0 0 1px var(--vellum-color-border), 0 24px 48px -16px color-mix(in oklab, var(--vellum-color-fg) 10%, transparent)',
+                borderRadius: 'var(--vellum-radius-md)',
+                overflow: 'hidden',
+              }}
+            >
+              <iframe
+                ref={iframeRef}
+                title={`${current.story.name} preview`}
+                src={`${PREVIEW_BASE}/${current.story.id}`}
+                style={{ width: '100%', height: '100%', border: 0, background: 'transparent', display: 'block' }}
+              />
+            </div>
+          </div>
+        ) : (
+          <div
+            style={{
+              background,
+              boxShadow:
+                '0 0 0 1px var(--vellum-color-border), 0 24px 48px -16px color-mix(in oklab, var(--vellum-color-fg) 10%, transparent)',
+              borderRadius: 'var(--vellum-radius-md)',
+              overflow: 'hidden',
+              width: '100%',
+              height: 320,
+              maxWidth: '100%',
+            }}
+          >
+            <iframe
+              ref={iframeRef}
+              title={`${current.story.name} preview`}
+              src={`${PREVIEW_BASE}/${current.story.id}`}
+              style={{ width: '100%', height: '100%', border: 0, background: 'transparent', display: 'block' }}
+            />
+          </div>
+        )
       ) : (
         <div style={{ color: 'var(--vellum-color-muted-fg)' }}>Select a story</div>
       )}
@@ -239,94 +394,27 @@ function PreviewStage({
   );
 }
 
-function PreviewOverlayPickers({
-  viewport,
-  onViewport,
-  background,
-  onBackground,
-}: {
-  viewport: ViewportSpec;
-  onViewport: (v: ViewportSpec) => void;
-  background: string;
-  onBackground: (v: string) => void;
-}) {
-  const presets: Array<{ id: string; value: string; label: string }> = [
-    { id: 'token', value: 'var(--vellum-color-bg)', label: 'Token' },
-    { id: 'muted', value: 'var(--vellum-color-muted)', label: 'Muted' },
-    { id: 'white', value: '#ffffff', label: 'White' },
-    { id: 'black', value: '#000000', label: 'Black' },
-  ];
-  const currentBg = presets.find((p) => p.value === background)?.id ?? 'token';
+function ScaleBadge({ label }: { label: string }) {
   return (
-    <div
+    <span
       style={{
         position: 'absolute',
         top: 10,
         right: 10,
         zIndex: 1,
-        display: 'flex',
-        gap: 6,
-        opacity: 0.65,
-        transition: 'opacity var(--vellum-duration-fast) var(--vellum-easing)',
-      }}
-      onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-      onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.65')}
-    >
-      <OverlayChip
-        value={viewport.id}
-        onChange={(id) => {
-          const next = DEFAULT_VIEWPORTS.find((v) => v.id === id);
-          if (next) onViewport(next);
-        }}
-        options={DEFAULT_VIEWPORTS.map((v) => ({
-          value: v.id,
-          label: v.width > 0 ? `${v.name} ${v.width}` : v.name,
-        }))}
-      />
-      <OverlayChip
-        value={currentBg}
-        onChange={(id) => {
-          const p = presets.find((p) => p.id === id);
-          if (p) onBackground(p.value);
-        }}
-        options={presets.map((p) => ({ value: p.id, label: p.label }))}
-      />
-    </div>
-  );
-}
-
-function OverlayChip({
-  value,
-  onChange,
-  options,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  options: Array<{ value: string; label: string }>;
-}) {
-  return (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={{
-        padding: '4px 8px',
+        padding: '3px 6px',
         background: 'color-mix(in oklab, var(--vellum-color-bg) 88%, transparent)',
-        color: 'var(--vellum-color-fg)',
+        color: 'var(--vellum-color-muted-fg)',
         border: '1px solid var(--vellum-color-border)',
         borderRadius: 'var(--vellum-radius-sm)',
         fontFamily: 'var(--vellum-font-mono)',
         fontSize: 10,
-        letterSpacing: '0.06em',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+      {label}
+    </span>
   );
 }
 
