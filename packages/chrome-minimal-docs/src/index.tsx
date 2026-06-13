@@ -38,8 +38,8 @@ export function DocsChrome({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: '240px 1fr',
-          maxWidth: 1200,
+          gridTemplateColumns: '240px minmax(0, 1fr)',
+          maxWidth: 1400,
           margin: '0 auto',
           paddingInline: 'var(--vellum-space-6)',
         }}
@@ -49,7 +49,7 @@ export function DocsChrome({
           style={{
             paddingBlock: 'calc(var(--vellum-space-12) + var(--vellum-space-4)) var(--vellum-space-12)',
             paddingInlineStart: 'var(--vellum-space-12)',
-            maxWidth: 760,
+            minWidth: 0,
           }}
         >
           {children}
@@ -82,7 +82,7 @@ function Header({
     >
       <div
         style={{
-          maxWidth: 1200,
+          maxWidth: 1400,
           margin: '0 auto',
           paddingInline: 'var(--vellum-space-6)',
           height: 64,

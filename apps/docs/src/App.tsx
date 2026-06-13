@@ -82,23 +82,27 @@ function Router({ path, onNavigate }: { path: string; onNavigate: (p: string) =>
   const tokens = useTokens();
   const chromeId = tokens.meta.chrome;
   const DocsChrome = DOCS_CHROMES[chromeId] ?? DOCS_CHROMES.minimal;
-  const WorkbenchChrome = WORKBENCH_CHROMES[chromeId] ?? WORKBENCH_CHROMES.minimal;
 
   const previewMatch = /^\/preview\/(.+)$/.exec(path);
   if (previewMatch) {
     return <PreviewPage storyId={previewMatch[1]!} />;
   }
 
+  // /workbench/<storyId> → /docs/<componentId>?view=workbench
+  // The standalone workbench shell is still available in the chrome package for
+  // users who want a full-screen workbench; the demo collapses both views onto
+  // a single component URL so chrome and component context stay intact.
   const workbenchMatch = /^\/workbench(?:\/(.+))?$/.exec(path);
   if (workbenchMatch) {
-    const storyId = workbenchMatch[1] ?? null;
-    return (
-      <WorkbenchChrome
-        currentStoryId={storyId}
-        onSelectStory={(id) => onNavigate(`/workbench/${id}`)}
-        onNavigate={onNavigate}
-      />
-    );
+    const storyId = workbenchMatch[1];
+    const componentId = storyId ? storyId.split('--')[0] : undefined;
+    const target = componentId ? `/docs/${componentId}?view=workbench` : '/docs';
+    // useEffect would suffice but a direct call here means no flicker.
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({}, '', target);
+      setTimeout(() => onNavigate(target.split('?')[0]!), 0);
+    }
+    return null;
   }
 
   const docsMatch = /^\/docs(?:\/([^/]+))?$/.exec(path);

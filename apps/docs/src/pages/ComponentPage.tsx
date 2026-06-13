@@ -1,5 +1,37 @@
+import { useEffect, useState } from 'react';
 import { ArgsTable, Story, useManifest } from '@vellum/react';
 import { ModeTabs } from '../components/ModeTabs.js';
+import { WorkbenchSection } from '../components/WorkbenchSection.js';
+
+type ViewMode = 'docs' | 'workbench';
+
+function useViewMode(componentId: string): [ViewMode, (m: ViewMode) => void] {
+  const [mode, setMode] = useState<ViewMode>(() => {
+    if (typeof window === 'undefined') return 'docs';
+    const param = new URLSearchParams(window.location.search).get('view');
+    if (param === 'workbench' || param === 'docs') return param;
+    try {
+      const stored = localStorage.getItem('vellum.viewMode');
+      return stored === 'workbench' ? 'workbench' : 'docs';
+    } catch {
+      return 'docs';
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vellum.viewMode', mode);
+    } catch {
+      /* ignore */
+    }
+    const url = new URL(window.location.href);
+    if (mode === 'workbench') url.searchParams.set('view', 'workbench');
+    else url.searchParams.delete('view');
+    window.history.replaceState({}, '', url.toString());
+  }, [mode, componentId]);
+
+  return [mode, setMode];
+}
 
 export function ComponentPage({
   componentId,
@@ -10,6 +42,8 @@ export function ComponentPage({
 }) {
   const manifest = useManifest();
   const component = manifest.components.find((c) => c.id === componentId);
+  const [viewMode, setViewMode] = useViewMode(componentId);
+
   if (!component) {
     return (
       <div
@@ -35,18 +69,19 @@ export function ComponentPage({
   const [group, name] = component.title.includes('/')
     ? (component.title.split('/') as [string, string])
     : ['Components', component.name];
-  const firstStoryId = component.stories[0]?.id;
-  const workbenchHref = firstStoryId ? `/workbench/${firstStoryId}` : '/workbench';
-  const docsHref = `/docs/${component.id}`;
+
+  const isWorkbench = viewMode === 'workbench';
+  const headingSize = isWorkbench ? 'clamp(28px, 3vw, 36px)' : 'clamp(40px, 6vw, 60px)';
+  const headerMargin = isWorkbench ? 'var(--vellum-space-5)' : 'var(--vellum-space-8)';
 
   return (
     <article>
-      <header style={{ marginBottom: 'var(--vellum-space-10)' }}>
+      <header style={{ marginBottom: headerMargin }}>
         <Breadcrumb group={group} name={name} />
         <div
           style={{
             display: 'flex',
-            alignItems: 'flex-end',
+            alignItems: 'center',
             justifyContent: 'space-between',
             gap: 'var(--vellum-space-6)',
             flexWrap: 'wrap',
@@ -57,36 +92,51 @@ export function ComponentPage({
             style={{
               margin: 0,
               fontFamily: 'var(--vellum-font-display)',
-              fontSize: 'clamp(40px, 6vw, 60px)',
+              fontSize: headingSize,
               fontWeight: 600,
               letterSpacing: '-0.03em',
               lineHeight: 1.05,
+              transition: 'font-size var(--vellum-duration-base) var(--vellum-easing)',
             }}
           >
             {component.name}
           </h1>
-          <ModeTabs current="docs" docsHref={docsHref} workbenchHref={workbenchHref} onNavigate={onNavigate} />
+          <ModeTabs
+            current={viewMode}
+            onSelect={(m) => setViewMode(m)}
+          />
         </div>
       </header>
 
-      <section style={{ marginBottom: 'var(--vellum-space-12)' }}>
-        <SectionHeader index="01" label={`${component.stories.length} stories`} title="Stories" />
-        <div>
-          {component.stories.map((story, i) => (
-            <Story key={story.id} of={story} index={i + 1} />
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <SectionHeader
-          index="02"
-          label={`${component.propsSchema?.props.length ?? 0} props`}
-          title="API"
-        />
-        <ArgsTable of={component} />
-      </section>
+      {isWorkbench ? (
+        <WorkbenchSection component={component} />
+      ) : (
+        <>
+          <DocsView component={component} />
+          <section style={{ marginTop: 'var(--vellum-space-12)' }}>
+            <SectionHeader
+              index="02"
+              label={`${component.propsSchema?.props.length ?? 0} props`}
+              title="API"
+            />
+            <ArgsTable of={component} />
+          </section>
+        </>
+      )}
     </article>
+  );
+}
+
+function DocsView({ component }: { component: ReturnType<NonNullable<ReturnType<typeof useManifest>>['components']['find']> & {} }) {
+  return (
+    <section>
+      <SectionHeader index="01" label={`${component.stories.length} stories`} title="Stories" />
+      <div>
+        {component.stories.map((story, i) => (
+          <Story key={story.id} of={story} index={i + 1} />
+        ))}
+      </div>
+    </section>
   );
 }
 
