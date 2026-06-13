@@ -96,10 +96,7 @@ function Router({ path, onNavigate }: { path: string; onNavigate: (p: string) =>
       <WorkbenchChrome
         currentStoryId={storyId}
         onSelectStory={(id) => onNavigate(`/workbench/${id}`)}
-        onModeChange={() => {
-          const componentId = storyId?.split('--')[0];
-          onNavigate(componentId ? `/docs/${componentId}` : '/docs');
-        }}
+        onNavigate={onNavigate}
       />
     );
   }
@@ -108,15 +105,12 @@ function Router({ path, onNavigate }: { path: string; onNavigate: (p: string) =>
   const componentId = docsMatch?.[1];
 
   return (
-    <DocsChrome
-      currentPath={path}
-      onNavigate={onNavigate}
-      onModeChange={() => {
-        const first = componentId ? `${componentId}--default` : '';
-        onNavigate(first ? `/workbench/${first}` : '/workbench');
-      }}
-    >
-      {componentId ? <ComponentPage componentId={componentId} /> : <OverviewPage onNavigate={onNavigate} />}
+    <DocsChrome currentPath={path} onNavigate={onNavigate}>
+      {componentId ? (
+        <ComponentPage componentId={componentId} onNavigate={onNavigate} />
+      ) : (
+        <OverviewPage onNavigate={onNavigate} />
+      )}
     </DocsChrome>
   );
 }

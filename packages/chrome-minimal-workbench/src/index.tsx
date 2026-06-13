@@ -19,6 +19,9 @@ export type WorkbenchChromeProps = {
   siteName?: string;
   currentStoryId: string | null;
   onSelectStory: (storyId: string) => void;
+  /** Per-component navigation (e.g. flip to docs view). */
+  onNavigate?: (path: string) => void;
+  /** @deprecated use `onNavigate` — kept for backward compat. */
   onModeChange?: () => void;
   previewBase?: string;
 };
@@ -30,6 +33,7 @@ export function WorkbenchChrome({
   siteName,
   currentStoryId,
   onSelectStory,
+  onNavigate,
   onModeChange,
   previewBase = '/preview',
 }: WorkbenchChromeProps) {
@@ -103,6 +107,9 @@ export function WorkbenchChrome({
         background={background}
         onBackground={setBackground}
         onModeChange={onModeChange}
+        currentComponent={current?.component ?? null}
+        currentStory={current?.story ?? null}
+        onNavigate={onNavigate}
       />
       <StoryTree
         components={visibleManifestComponents(manifest.components)}
@@ -149,6 +156,9 @@ function Header({
   background,
   onBackground,
   onModeChange,
+  currentComponent,
+  currentStory,
+  onNavigate,
 }: {
   name: string;
   viewport: ViewportSpec;
@@ -156,6 +166,9 @@ function Header({
   background: string;
   onBackground: (v: string) => void;
   onModeChange?: () => void;
+  currentComponent: ComponentEntry | null;
+  currentStory: StoryEntry | null;
+  onNavigate?: (path: string) => void;
 }) {
   return (
     <header
@@ -167,37 +180,130 @@ function Header({
         paddingInline: 'var(--vellum-space-5)',
         borderBottom: '1px solid var(--vellum-color-border)',
         background: 'var(--vellum-color-bg)',
+        gap: 'var(--vellum-space-4)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--vellum-space-2)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--vellum-space-4)', minWidth: 0 }}>
         <span
           style={{
             fontFamily: 'var(--vellum-font-display)',
             fontWeight: 600,
-            fontSize: 'var(--vellum-text-xl)',
-            letterSpacing: '-0.02em',
+            fontSize: 'var(--vellum-text-md)',
+            letterSpacing: '-0.01em',
+            whiteSpace: 'nowrap',
+            color: 'var(--vellum-color-muted-fg)',
           }}
         >
           {name}
         </span>
-        <span
-          style={{
-            fontFamily: 'var(--vellum-font-mono)',
-            fontSize: 11,
-            textTransform: 'uppercase',
-            letterSpacing: '0.12em',
-            color: 'var(--vellum-color-muted-fg)',
-          }}
-        >
-          Workbench
-        </span>
+        {currentComponent ? (
+          <>
+            <span
+              aria-hidden
+              style={{
+                fontFamily: 'var(--vellum-font-mono)',
+                fontSize: 11,
+                color: 'var(--vellum-color-border)',
+              }}
+            >
+              /
+            </span>
+            <span
+              style={{
+                fontFamily: 'var(--vellum-font-display)',
+                fontWeight: 600,
+                fontSize: 'var(--vellum-text-md)',
+                letterSpacing: '-0.01em',
+                color: 'var(--vellum-color-fg)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {currentComponent.name}
+            </span>
+            {currentStory ? (
+              <span
+                style={{
+                  fontFamily: 'var(--vellum-font-mono)',
+                  fontSize: 11,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.12em',
+                  color: 'var(--vellum-color-muted-fg)',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {currentStory.name}
+              </span>
+            ) : null}
+            {onNavigate ? (
+              <InlineModeTabs current="workbench" componentId={currentComponent.id} storyId={currentStory?.id} onNavigate={onNavigate} />
+            ) : null}
+          </>
+        ) : null}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--vellum-space-4)' }}>
         <ViewportPicker value={viewport} onChange={onViewport} />
         <BackgroundPicker value={background} onChange={onBackground} />
-        <BackToDocs onClick={onModeChange} />
+        {!onNavigate && onModeChange ? <BackToDocs onClick={onModeChange} /> : null}
       </div>
     </header>
+  );
+}
+
+function InlineModeTabs({
+  current,
+  componentId,
+  storyId,
+  onNavigate,
+}: {
+  current: 'docs' | 'workbench';
+  componentId: string;
+  storyId?: string;
+  onNavigate: (path: string) => void;
+}) {
+  const docsHref = `/docs/${componentId}`;
+  const workbenchHref = `/workbench/${storyId ?? `${componentId}--default`}`;
+  const tab = (label: string, href: string, active: boolean) => (
+    <a
+      href={href}
+      onClick={(e) => {
+        e.preventDefault();
+        if (!active) onNavigate(href);
+      }}
+      style={{
+        paddingBlock: 4,
+        paddingInline: 10,
+        textDecoration: 'none',
+        fontFamily: 'var(--vellum-font-mono)',
+        fontSize: 10,
+        letterSpacing: '0.12em',
+        textTransform: 'uppercase',
+        fontWeight: 600,
+        color: active ? 'var(--vellum-color-bg)' : 'var(--vellum-color-fg)',
+        background: active ? 'var(--vellum-color-fg)' : 'transparent',
+        borderRadius: 'calc(var(--vellum-radius-sm))',
+        cursor: active ? 'default' : 'pointer',
+      }}
+    >
+      {label}
+    </a>
+  );
+  return (
+    <div
+      role="tablist"
+      style={{
+        marginLeft: 'var(--vellum-space-2)',
+        display: 'inline-flex',
+        padding: 2,
+        background: 'color-mix(in oklab, var(--vellum-color-fg) 5%, transparent)',
+        border: '1px solid var(--vellum-color-border)',
+        borderRadius: 'var(--vellum-radius-md)',
+      }}
+    >
+      {tab('Docs', docsHref, current === 'docs')}
+      {tab('Workbench', workbenchHref, current === 'workbench')}
+    </div>
   );
 }
 

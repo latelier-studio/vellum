@@ -28,6 +28,9 @@ export type WorkbenchChromeProps = {
   siteName?: string;
   currentStoryId: string | null;
   onSelectStory: (storyId: string) => void;
+  /** Per-component navigation. */
+  onNavigate?: (path: string) => void;
+  /** @deprecated use `onNavigate` — kept for backward compat. */
   onModeChange?: () => void;
   previewBase?: string;
 };
@@ -39,6 +42,7 @@ export function WorkbenchChrome({
   siteName,
   currentStoryId,
   onSelectStory,
+  onNavigate,
   onModeChange,
   previewBase = '/preview',
 }: WorkbenchChromeProps) {
@@ -104,7 +108,17 @@ export function WorkbenchChrome({
         overflow: 'hidden',
       }}
     >
-      <Header name={name} viewport={viewport} onViewport={setViewport} background={background} onBackground={setBackground} onModeChange={onModeChange} />
+      <Header
+        name={name}
+        viewport={viewport}
+        onViewport={setViewport}
+        background={background}
+        onBackground={setBackground}
+        onModeChange={onModeChange}
+        currentComponent={current?.component ?? null}
+        currentStory={current?.story ?? null}
+        onNavigate={onNavigate}
+      />
       <StoryTree components={visibleManifestComponents(manifest.components)} currentStoryId={current?.story.id ?? null} onSelectStory={onSelectStory} />
       <PreviewStage current={current} viewport={viewport} background={background} previewBase={previewBase} iframeRef={iframeRef} />
       <Panels
@@ -153,6 +167,9 @@ function Header({
   background,
   onBackground,
   onModeChange,
+  currentComponent,
+  currentStory,
+  onNavigate,
 }: {
   name: string;
   viewport: ViewportSpec;
@@ -160,6 +177,9 @@ function Header({
   background: string;
   onBackground: (v: string) => void;
   onModeChange?: () => void;
+  currentComponent: ComponentEntry | null;
+  currentStory: StoryEntry | null;
+  onNavigate?: (path: string) => void;
 }) {
   return (
     <header
@@ -171,21 +191,35 @@ function Header({
         paddingInline: 20,
         borderBottom: '1px solid var(--vellum-color-fg)',
         background: 'var(--vellum-color-bg)',
+        gap: 12,
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
         <span
           style={{
             fontFamily: 'var(--vellum-font-display, var(--vellum-font-body))',
             fontWeight: 900,
-            fontSize: 18,
-            letterSpacing: '-0.02em',
+            fontSize: 14,
+            letterSpacing: '-0.01em',
             textTransform: 'uppercase',
+            color: 'var(--vellum-color-muted-fg)',
           }}
         >
           {name}
         </span>
-        <span style={{ ...monoCaps, color: 'var(--vellum-color-muted-fg)' }}>// Workbench</span>
+        {currentComponent ? (
+          <>
+            <span style={{ ...monoCaps, color: 'var(--vellum-color-fg)' }}>// {currentComponent.name}</span>
+            {currentStory ? (
+              <span style={{ ...monoCaps, color: 'var(--vellum-color-muted-fg)' }}>· {currentStory.name}</span>
+            ) : null}
+            {onNavigate ? (
+              <BrutalistModeTabs current="workbench" componentId={currentComponent.id} storyId={currentStory?.id} onNavigate={onNavigate} />
+            ) : null}
+          </>
+        ) : (
+          <span style={{ ...monoCaps, color: 'var(--vellum-color-muted-fg)' }}>// Workbench</span>
+        )}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
         <RuledSelect
@@ -216,22 +250,66 @@ function Header({
             { value: 'black', label: 'Black' },
           ]}
         />
-        <button
-          type="button"
-          onClick={onModeChange}
-          style={{
-            ...monoCaps,
-            background: 'transparent',
-            border: 0,
-            color: 'var(--vellum-color-fg)',
-            cursor: 'pointer',
-            padding: '6px 0',
-          }}
-        >
-          ← Docs
-        </button>
+        {!onNavigate && onModeChange ? (
+          <button
+            type="button"
+            onClick={onModeChange}
+            style={{
+              ...monoCaps,
+              background: 'transparent',
+              border: 0,
+              color: 'var(--vellum-color-fg)',
+              cursor: 'pointer',
+              padding: '6px 0',
+            }}
+          >
+            ← Docs
+          </button>
+        ) : null}
       </div>
     </header>
+  );
+}
+
+function BrutalistModeTabs({
+  current,
+  componentId,
+  storyId,
+  onNavigate,
+}: {
+  current: 'docs' | 'workbench';
+  componentId: string;
+  storyId?: string;
+  onNavigate: (path: string) => void;
+}) {
+  const docsHref = `/docs/${componentId}`;
+  const workbenchHref = `/workbench/${storyId ?? `${componentId}--default`}`;
+  const tab = (label: string, href: string, active: boolean) => (
+    <a
+      href={href}
+      onClick={(e) => {
+        e.preventDefault();
+        if (!active) onNavigate(href);
+      }}
+      style={{
+        ...monoCaps,
+        paddingBlock: 4,
+        paddingInline: 8,
+        textDecoration: 'none',
+        color: active ? 'var(--vellum-color-bg)' : 'var(--vellum-color-fg)',
+        background: active ? 'var(--vellum-color-fg)' : 'transparent',
+        border: '1px solid var(--vellum-color-fg)',
+        cursor: active ? 'default' : 'pointer',
+      }}
+    >
+      {label}
+    </a>
+  );
+  return (
+    <div role="tablist" style={{ marginLeft: 8, display: 'inline-flex', gap: 0 }}>
+      {tab('Docs', docsHref, current === 'docs')}
+      {tab('Workbench', workbenchHref, current === 'workbench')}
+    </div>
   );
 }
 

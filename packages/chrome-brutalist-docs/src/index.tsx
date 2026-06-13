@@ -158,23 +158,25 @@ function Header({
         Design System &nbsp;/&nbsp; {version}
       </div>
       <div style={{ textAlign: 'right' }}>
-        <button
-          type="button"
-          onClick={onModeChange}
-          style={{
-            background: 'transparent',
-            color: 'var(--vellum-color-fg)',
-            border: 0,
-            fontFamily: 'var(--vellum-font-mono)',
-            fontSize: 11,
-            letterSpacing: '0.14em',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            padding: '6px 0',
-          }}
-        >
-          → Workbench
-        </button>
+        {onModeChange ? (
+          <button
+            type="button"
+            onClick={onModeChange}
+            style={{
+              background: 'transparent',
+              color: 'var(--vellum-color-fg)',
+              border: 0,
+              fontFamily: 'var(--vellum-font-mono)',
+              fontSize: 11,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              padding: '6px 0',
+            }}
+          >
+            → Workbench
+          </button>
+        ) : null}
       </div>
     </header>
   );

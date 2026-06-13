@@ -119,7 +119,7 @@ function Header({
           </span>
           <MonoCaps style={{ color: 'var(--vellum-color-muted-fg)' }}>Design System</MonoCaps>
         </a>
-        <ModeChip onClick={onModeChange} label="Workbench" direction="right" />
+        {onModeChange ? <ModeChip onClick={onModeChange} label="Workbench" direction="right" /> : null}
       </div>
     </header>
   );

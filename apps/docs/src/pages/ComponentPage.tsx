@@ -1,6 +1,13 @@
 import { ArgsTable, Story, useManifest } from '@vellum/react';
+import { ModeTabs } from '../components/ModeTabs.js';
 
-export function ComponentPage({ componentId }: { componentId: string }) {
+export function ComponentPage({
+  componentId,
+  onNavigate,
+}: {
+  componentId: string;
+  onNavigate: (path: string) => void;
+}) {
   const manifest = useManifest();
   const component = manifest.components.find((c) => c.id === componentId);
   if (!component) {
@@ -28,24 +35,38 @@ export function ComponentPage({ componentId }: { componentId: string }) {
   const [group, name] = component.title.includes('/')
     ? (component.title.split('/') as [string, string])
     : ['Components', component.name];
+  const firstStoryId = component.stories[0]?.id;
+  const workbenchHref = firstStoryId ? `/workbench/${firstStoryId}` : '/workbench';
+  const docsHref = `/docs/${component.id}`;
 
   return (
     <article>
       <header style={{ marginBottom: 'var(--vellum-space-10)' }}>
         <Breadcrumb group={group} name={name} />
-        <h1
+        <div
           style={{
-            margin: 0,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'space-between',
+            gap: 'var(--vellum-space-6)',
+            flexWrap: 'wrap',
             marginTop: 10,
-            fontFamily: 'var(--vellum-font-display)',
-            fontSize: 'clamp(40px, 6vw, 60px)',
-            fontWeight: 600,
-            letterSpacing: '-0.03em',
-            lineHeight: 1.05,
           }}
         >
-          {component.name}
-        </h1>
+          <h1
+            style={{
+              margin: 0,
+              fontFamily: 'var(--vellum-font-display)',
+              fontSize: 'clamp(40px, 6vw, 60px)',
+              fontWeight: 600,
+              letterSpacing: '-0.03em',
+              lineHeight: 1.05,
+            }}
+          >
+            {component.name}
+          </h1>
+          <ModeTabs current="docs" docsHref={docsHref} workbenchHref={workbenchHref} onNavigate={onNavigate} />
+        </div>
       </header>
 
       <section style={{ marginBottom: 'var(--vellum-space-12)' }}>
