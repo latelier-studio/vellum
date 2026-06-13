@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { ComponentEntry, PropType, StoryEntry } from '@vellum/story';
+import { isHidden, type ComponentEntry, type PropType, type StoryEntry } from '@vellum/story';
 import {
   type A11yResult,
   type PreviewMessageFromChild,
@@ -34,11 +34,28 @@ export function WorkbenchSection({
   viewport: ViewportSpec;
   background: string;
 }) {
-  const [storyId, setStoryId] = useState<string>(() => component.stories[0]?.id ?? '');
+  const visibleStories = useMemo(
+    () => component.stories.filter((s) => !isHidden(s)),
+    [component],
+  );
+  const firstStoryId = visibleStories[0]?.id ?? component.stories[0]?.id ?? '';
+  const [storyId, setStoryId] = useState<string>(firstStoryId);
+
+  // When the component changes (e.g. user navigates from sidebar) or the
+  // current storyId no longer points at a story in this component, snap to
+  // the first visible story automatically.
+  useEffect(() => {
+    if (!component.stories.find((s) => s.id === storyId)) {
+      setStoryId(firstStoryId);
+    }
+  }, [component, storyId, firstStoryId]);
+
   const current = useMemo<{ component: ComponentEntry; story: StoryEntry } | null>(() => {
-    const story = component.stories.find((s) => s.id === storyId);
+    const story = component.stories.find((s) => s.id === storyId)
+      ?? visibleStories[0]
+      ?? component.stories[0];
     return story ? { component, story } : null;
-  }, [component, storyId]);
+  }, [component, storyId, visibleStories]);
 
   const [args, setArgs] = useState<Record<string, unknown>>(() => current?.story.args ?? {});
   const [actions, setActions] = useState<ActionLog[]>([]);
